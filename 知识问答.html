@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>昊畅100问（难度升级版）</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family: "Microsoft YaHei",sans-serif}
+body{background:#f6f7fa;padding:20px}
+.container{max-width:800px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;box-shadow:0 0 15px rgba(0,0,0,0.06)}
+.title{text-align:center;color:#2c3e50;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #48f}
+.buttons{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:20px}
+button{padding:10px 16px;border:none;border-radius:6px;background:#48f;color:white;font-size:15px;cursor:pointer}
+button:hover{background:#36d}
+button:disabled{background:#ccc}
+.btn-wrong{background:#e53935}
+.btn-review{background:#fb8c00}
+.question{margin-bottom:16px;font-size:17px;color:#222}
+.qnum{font:bold;color:#48f;margin-bottom:8px}
+.option{padding:12px 14px;border:1px solid #ddd;border-radius:8px;margin-bottom:10px;cursor:pointer}
+.option:hover{background:#f0f7ff}
+.option.selected{background:#d6e4ff;border-color:#48f}
+.option.right{background:#e8f5e9;border-color:#4caf50;color:#2e7d32}
+.option.wrong{background:#ffebee;border-color:#f44336;color:#c62828}
+.answer-box{margin-top:16px;padding:14px;background:#e8f5e9;border-radius:8px;border:1px solid #4caf50}
+.answer-title{font:bold;color:#2e7d32;margin-bottom:6px}
+.stats{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin:20px 0;text-align:center;font-size:15px}
+.stats span{font:bold;color:#e53935}
+.wrong-book{margin-top:24px;padding-top:20px;border-top:2px solid #e53935}
+.wrong-title{color:#e53935;font:bold;font-size:17px;margin-bottom:12px}
+.wrong-list{max-height:380px;overflow-y:auto;padding-right:8px}
+.wrong-item{padding:12px;background:#fff4f4;border:1px solid #ffcdd2;border-radius:8px;margin-bottom:10px}
+.wrong-q{font:bold;margin-bottom:6px}
+.wrong-a{color:#2e7d32}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="container">
+  <h2 class="title">昊畅-羟苯磺酸钙胶囊100问（难度升级版）</h2>
+  <div class="buttons">
+    <button id="start">随机一题</button>
+    <button id="submit" disabled>提交答案</button>
+    <button id="next" disabled>下一题</button>
+    <button id="reset">重置全部</button>
+    <button id="clearWrong" class="btn-wrong">清空错题</button>
+    <button id="doWrong" class="btn-review">刷错题</button>
+  </div>
+
+  <div class="qnum" id="qnum">请点击【随机一题】开始</div>
+  <div class="question" id="question"></div>
+  <div id="options"></div>
+  <div class="answer-box hidden" id="answerBox">
+    <div class="answer-title">正确答案（原文）：</div>
+    <div id="answerFull"></div>
+  </div>
+
+  <div class="stats">
+    <div>总题数：<span>100</span></div>
+    <div>已答：<span id="done">0</span></div>
+    <div>正确：<span id="right">0</span></div>
+    <div>错误：<span id="wrong">0</span></div>
+    <div>正确率：<span id="rate">0%</span></div>
+  </div>
+
+  <div class="wrong-book">
+    <div class="wrong-title">📕 错题本（<span id="wrongCount">0</span> 题）</div>
+    <div class="wrong-list" id="wrongList">暂无错题</div>
+  </div>
+</div>
+
+<script>
+// 难度升级版：答案100%原文不变，干扰项高度相似，难度大幅提升
+const questions = [
+{ q:"昊畅的主要成分是什么?", a:"羟苯磺酸钙", options:["羟苯磺酸钙","羟苯磺酸锌","对氨基苯磺酸钙","苯磺酸钙"] },
+{ q:"昊畅的化学名称是什么?", a:"2,5-二羟基苯磺酸钙一水合物", options:["2,5-二羟基苯磺酸钙一水合物","2,4-二羟基苯磺酸钙","2,5-二羟基苯磺酸钠","苯磺酸钙无水物"] },
+{ q:"昊畅的性状是什么?", a:"内容物为白色或类白色粉末或颗粒", options:["内容物为白色或类白色粉末或颗粒","白色片","淡黄色软膏","无色注射液"] },
+{ q:"昊畅通过仿制药一致性评价的规格是?", a:"0.5g", options:["0.5g","0.25g","0.75g","1.0g"] },
+{ q:"昊畅的批准文号是什么?", a:"国药准字H20110031", options:["国药准字H20110031","国药准字H20110311","国药准字H20100031","国药准字H20120031"] },
+{ q:"昊畅被列入最新的医保目录是哪一年版本?属于哪一类?", a:"2025 年医保目录，乙类(其他眼科用药羟苯磺酸，编号1364)", options:["2025 年医保目录，乙类(其他眼科用药羟苯磺酸，编号1364)","2024年乙类","2025年甲类","2023年乙类"] },
+{ q:"昊畅的OTC 分类是什么?", a:"甲类，双跨品种", options:["甲类，双跨品种","乙类双跨","甲类非双跨","纯处方"] },
+{ q:"昊畅的生产厂家是什么?", a:"宁夏康亚药业股份有限公司", options:["宁夏康亚药业股份有限公司","宁夏康亚制药","宁夏亚康药业","银川康亚制药"] },
+{ q:"昊畅的贮藏条件是什么?", a:"密封，凉暗、干燥处保存", options:["密封，凉暗、干燥处保存","密封冷藏","避光常温","密封冷冻"] },
+{ q:"昊畅0.5g 规格的有效期是多久?", a:"36 个月", options:["36 个月","24个月","48个月","30个月"] },
+{ q:"昊畅的执行标准是什么?", a:"《国家药品监督管理局标准》YBH07102019", options:["《国家药品监督管理局标准》YBH07102019","中国药典2020版","YBH07112019","企业内控标准"] },
+{ q:"昊畅的包装规格，集采中选且主推的有哪些?", a:"48 粒/盒、60 粒/盒", options:["48 粒/盒、60 粒/盒","36粒、48粒","60粒、72粒","24粒、48粒"] },
+{ q:"昊畅的产品定位是什么?", a:"血管保护剂", options:["血管保护剂","抗凝剂","溶栓剂","降压剂"] },
+{ q:"昊畅的核心卖点是什么?", a:"保护微血管，改善微循环，防治微血管病变基础用药", options:["保护微血管，改善微循环，防治微血管病变基础用药","降低血糖","强效止痛","快速抗炎"] },
+{ q:"昊畅是否通过仿制药一致性评价?", a:"是，国内首家通过仿制药一致性评价品种，与原研药物生物学等效", options:["是，国内首家通过仿制药一致性评价品种，与原研药物生物学等效","是，第二家通过","未通过","申请中"] },
+{ q:"昊畅的原料药来源有什么优势?", a:"羟苯磺酸钙原料药自产，药品安全性及质量更有保障", options:["羟苯磺酸钙原料药自产，药品安全性及质量更有保障","进口原料药","国内采购","委托生产"] },
+{ q:"昊畅的原集采中选省份是哪7 个?", a:"浙江省、安徽省、湖北省、湖南省、山西省、内蒙古自治区、宁夏回族自治区", options:["浙江省、安徽省、湖北省、湖南省、山西省、内蒙古自治区、宁夏回族自治区","含广东、江苏","含四川、重庆","含山东、河南"] },
+{ q:"昊畅的目标科室有哪些?(至少列举5 个)", a:"内分泌科、眼科、肾内科、血管外科、神经内科、全科、肛肠科、心内科等", options:["内分泌科、眼科、肾内科、血管外科、神经内科、全科、肛肠科、心内科等","呼吸科、消化科","感染科、结核科","皮肤科、性病科"] },
+{ q:"昊畅的目标市场是什么?(至少列举2 个)", a:"糖尿病微循环病变一级/二级预防用药、慢性静脉功能不全临床推荐用药、冠状动脉微血管病变基础用药", options:["糖尿病微循环病变一级/二级预防用药、慢性静脉功能不全临床推荐用药、冠状动脉微血管病变基础用药","急性感染治疗","感冒发热","骨科康复"] },
+{ q:"昊畅的药代动力学特点中，血浆半衰期约为多久?", a:"5 小时左右", options:["5 小时左右","3小时","8小时","10小时"] },
+{ q:"昊畅在微血管壁方面的作用是什么?", a:"增加阻力，减低其病理性高通透性", options:["增加阻力，减低其病理性高通透性","降低阻力，提高通透性","单纯扩张血管","直接收缩血管"] },
+{ q:"昊畅在血流方面的作用是什么?", a:"降低血液及血浆粘稠度，降低血小板的高凝聚性，防止血栓形成", options:["降低血液及血浆粘稠度，降低血小板的高凝聚性，防止血栓形成","提高血粘度","促进凝血","升高血小板"] },
+{ q:"昊畅对微血管病变的临床体征有什么效果?", a:"消除或缓解水肿，毛细血管性渗血，下肢沉重和压力感", options:["消除或缓解水肿，毛细血管性渗血，下肢沉重和压力感","缓解疼痛","降低体温","升高血压"] },
+{ q:"昊畅在血管方面的作用方向还包括哪些?(至少列举2 个)", a:"抑制血管活性物质、抗氧化抗炎、改善血管内皮紊乱、降低微血管壁病理性高通透性", options:["抑制血管活性物质、抗氧化抗炎、改善血管内皮紊乱、降低微血管壁病理性高通透性","收缩大血管","升高血压","破坏内皮细胞"] },
+{ q:"昊畅在血流方面还能起到什么作用?", a:"降低血液高粘滞度，降低血小板高聚集、高活性，防止血栓形成", options:["降低血液高粘滞度，降低血小板高聚集、高活性，防止血栓形成","升高血粘度","促进血栓形成","提高凝血功能"] },
+{ q:"昊畅是否会进入肠肝循环?", a:"不会", options:["不会","会","部分进入","少量进入"] },
+{ q:"昊畅的排泄途径是什么?", a:"主要以原形排泄，24 小时内约50%从尿中排泄，约50%从粪便排泄", options:["主要以原形排泄，24 小时内约50%从尿中排泄，约50%从粪便排泄","全部尿液","全部粪便","胆汁排泄"] },
+{ q:"昊畅的蛋白结合率是多少?", a:"20%~25%", options:["20%~25%","10%~15%","30%~35%","50%"] },
+{ q:"昊畅是否会通过血脑屏障或胎盘屏障?", a:"动物试验表明不会，人体情况尚不明确", options:["动物试验表明不会，人体情况尚不明确","可以通过","少量通过","大量通过"] },
+{ q:"昊畅在母乳中是否存在?", a:"给药1500mg 后母乳中含0.4µg/ml，可微量存在", options:["给药1500mg 后母乳中含0.4µg/ml，可微量存在","大量存在","完全不存在","仅短期存在"] },
+{ q:"昊畅发挥血管保护作用的核心机制有几个方面?", a:"3 个方面，分别是微血管壁、血流、微循环改善", options:["3 个方面，分别是微血管壁、血流、微循环改善","2个方面","4个方面","1个方面"] },
+{ q:"昊畅抑制血小板聚集的目的是什么?", a:"防止血栓形成，改善微循环状态", options:["防止血栓形成，改善微循环状态","促进凝血","升高血小板","增强凝血功能"] },
+{ q:"昊畅降低毛细血管通透性的作用可以缓解哪些症状?", a:"水肿、毛细血管渗血、下肢沉重和压力感", options:["水肿、毛细血管渗血、下肢沉重和压力感","头痛失眠","关节疼痛","发热乏力"] },
+{ q:"昊畅的毒理研究中，小鼠口服给药的LD50 值情况如何?", a:"小鼠口服给药的LD50 值<4000mg/kg", options:["小鼠口服给药的LD50 值<4000mg/kg","剧毒LD50<100","高毒","无毒"] },
+{ q:"昊畅的胚胎毒性和致突变试验结果如何?", a:"显示无任何毒性", options:["显示无任何毒性","轻度毒性","中度毒性","强毒性"] },
+{ q:"昊畅的主要适应症有哪两大类?", a:"一是微血管病的治疗，二是慢性静脉功能不全及其后遗症的辅助治疗", options:["一是微血管病的治疗，二是慢性静脉功能不全及其后遗症的辅助治疗","高血压、高血脂","感冒、发热","胃病、肝病"] },
+{ q:"微血管病治疗具体包含哪些疾病?", a:"糖尿病性微血管病变(视网膜病及肾小球硬化症)、微血管损伤(伴有毛细血管脆性和通透性增加等)", options:["糖尿病性微血管病变(视网膜病及肾小球硬化症)、微血管损伤(伴有毛细血管脆性和通透性增加等)","冠心病、心梗","脑出血、脑梗","胃溃疡、胃炎"] },
+{ q:"慢性静脉功能不全及其后遗症包含哪些情况?", a:"静脉曲张综合征、栓塞后综合征、腿部溃疡、紫癜性皮炎等郁积性皮肤病、周围血管郁积性水肿等", options:["静脉曲张综合征、栓塞后综合征、腿部溃疡、紫癜性皮炎等郁积性皮肤病、周围血管郁积性水肿等","心肌梗死","脑出血","肺炎咳喘"] },
+{ q:"昊畅在糖尿病视网膜病变中的作用是什么?", a:"维持视网膜屏障完整性，减轻或阻止视网膜微血管的渗漏，抑制新生血管生成，延缓及阻止DR 的发生进展，降低失明发生率", options:["维持视网膜屏障完整性，减轻或阻止视网膜微血管的渗漏，抑制新生血管生成，延缓及阻止DR 的发生进展，降低失明发生率","直接降低血糖","抗病毒感染","修复视神经"] },
+{ q:"昊畅在糖尿病肾病中的作用是什么?", a:"保持肾小球滤过屏障的完整性，改善肾小球滤过功能，降低尿白蛋白排泄率(UAER)水平，减少肾小球硬化及肾损害", options:["保持肾小球滤过屏障的完整性，改善肾小球滤过功能，降低尿白蛋白排泄率(UAER)水平，减少肾小球硬化及肾损害","升高血糖","加重肾损伤","无治疗作用"] },
+{ q:"昊畅在糖尿病周围神经病变中的作用是什么?", a:"降低微血管的通透性，减少血管内膜损伤，改善淋巴液回流，减少水肿，改善神经的缺血缺氧", options:["降低微血管的通透性，减少血管内膜损伤，改善淋巴液回流，减少水肿，改善神经的缺血缺氧","加重神经损伤","单纯止痛","降低血糖"] },
+{ q:"昊畅在2 型糖尿病动脉粥样硬化中的作用是什么?", a:"减轻内皮细胞损伤，增加血管内皮细胞的密度，减少微血栓形成，阻止AS 斑块的发生发展", options:["减轻内皮细胞损伤，增加血管内皮细胞的密度，减少微血栓形成，阻止AS 斑块的发生发展","促进斑块形成","加重内皮损伤","升高血压"] },
+{ q:"昊畅在冠心病心绞痛中的作用是什么?", a:"降低血液黏稠性，改善微循环状态，解除血管痉挛，减少硝酸甘油用量，改善心肌供血", options:["降低血液黏稠性，改善微循环状态，解除血管痉挛，减少硝酸甘油用量，改善心肌供血","加重心肌缺血","单纯止痛","降低体温"] },
+{ q:"昊畅在慢性静脉功能不全中的作用是什么?", a:"降低微血管壁高通透性，改善腿部水肿、减轻疼痛;降低血液黏稠度，降低术后血栓形成风险", options:["降低微血管壁高通透性，改善腿部水肿、减轻疼痛;降低血液黏稠度，降低术后血栓形成风险","加重水肿","升高血压","加重疼痛"] },
+{ q:"昊畅是否可以用于糖尿病足的治疗?", a:"可以，可促进糖尿病足溃疡创面愈合", options:["可以，可促进糖尿病足溃疡创面愈合","禁用","慎用","仅晚期可用"] },
+{ q:"昊畅是否可以用于痔疮综合征?", a:"可以，可缓解痔的急性症状，如疼痛和出血，还能缩短术后创面愈合时间", options:["可以，可缓解痔的急性症状，如疼痛和出血，还能缩短术后创面愈合时间","禁用","慎用","术后禁用"] },
+{ q:"昊畅是否可以用于糖尿病勃起功能障碍?", a:"可以，通过改善微循环障碍，扩张血管，增加血流量达到治疗效果", options:["可以，通过改善微循环障碍，扩张血管，增加血流量达到治疗效果","无效","禁用","仅心理作用"] },
+{ q:"昊畅在血液透析患者中的作用是什么?", a:"能降低尿素氮浓度，适当延长透析间期，改善肾功能，不影响透析患者生活质量", options:["能降低尿素氮浓度，适当延长透析间期，改善肾功能，不影响透析患者生活质量","加重肾衰","无作用","减少透析次数"] },
+{ q:"中国2 型糖尿病防治指南(2020 年版)中，推荐羟苯磺酸钙用于哪类患者?", a:"轻中度的非增殖期糖尿病视网膜病变患者", options:["轻中度的非增殖期糖尿病视网膜病变患者","重度增殖期","所有糖尿病视网膜病变","无推荐"] },
+{ q:"糖尿病微循环障碍临床用药专家共识(2021 年版)中，昊畅在DR 和DN 的推荐级别分别是什么?", a:"DR 为I 类推荐，A 级证据;DN 为IIa 类推荐，B 级证据", options:["DR 为I 类推荐，A 级证据;DN 为IIa 类推荐，B 级证据","均为II类","均为III类","均不推荐"] },
+{ q:"基层糖尿病微血管病变筛查与防治专家共识(2021 年版)中，昊畅在DR 和DN 的推荐级别分别是什么?", a:"DR 为I 类推荐，A 级证据;DN 为I 类推荐，B 级证据", options:["DR 为I 类推荐，A 级证据;DN 为I 类推荐，B 级证据","均为II类","均为III类","无推荐"] },
+{ q:"昊畅联合激光治疗糖尿病视网膜病变的优势是什么?", a:"保护视网膜血管、优化视网膜功能，优于单用激光治疗，能提升整体疗效，改善眼底结构及微循环状态", options:["保护视网膜血管、优化视网膜功能，优于单用激光治疗，能提升整体疗效，改善眼底结构及微循环状态","疗效更差","疗效相当","风险更高"] },
+{ q:"昊畅联合ARB/ACEI 治疗糖尿病肾病的优势是什么?", a:"能更显著降低尿白蛋白排泄率(UAER)，延缓及阻止肾脏功能恶化", options:["能更显著降低尿白蛋白排泄率(UAER)，延缓及阻止肾脏功能恶化","无效","加重肾损伤","无优势"] },
+{ q:"昊畅治疗慢性静脉功能不全时，对哪类患者效果更显著?", a:"患者症状越重，改善效果越显著", options:["患者症状越重，改善效果越显著","症状越轻越好","所有患者效果一致","均无效"] },
+{ q:"昊畅在下肢静脉曲张治疗中可以改善哪些症状?", a:"水肿、痉挛、疼痛等症状", options:["水肿、痉挛、疼痛等症状","失明瘫痪","发热咳嗽","头痛头晕"] },
+{ q:"糖尿病性视网膜病变患者服用昊畅的剂量是多少?", a:"一次1 粒，一日3 次(早、中、晚各服一次)", options:["一次1 粒，一日3 次(早、中、晚各服一次)","1粒一日1次","1粒一日2次","2粒一日3次"] },
+{ q:"昊畅其他适应症的初始服用剂量是多少?", a:"一次1 粒，一日2 次(早、晚各一次)", options:["一次1 粒，一日2 次(早、晚各一次)","1粒一日1次","2粒一日2次","2粒一日3次"] },
+{ q:"其他适应症患者服用昊畅后症状改善，如何调整剂量?", a:"大约服药一个月后，略去晚上服药一次", options:["大约服药一个月后，略去晚上服药一次","剂量减半","停止早上服药","增加剂量"] },
+{ q:"昊畅的建议疗程是多久?", a:"3~6 个月，建议长期服用", options:["3~6 个月，建议长期服用","3天","7天","1个月"] },
+{ q:"昊畅的禁忌人群是谁?", a:"对本品任何成份过敏者", options:["对本品任何成份过敏者","老年人","儿童","孕妇"] },
+{ q:"严重肾功能不全需透析的患者使用昊畅有什么注意事项?", a:"需要减量，常规剂量为500mg tid，可根据肾功能严重程度减至500mg bid/qd", options:["需要减量，常规剂量为500mg tid，可根据肾功能严重程度减至500mg bid/qd","剂量加倍","常规剂量","禁用"] },
+{ q:"昊畅可能导致的非常罕见的严重不良反应是什么?", a:"粒细胞缺乏症、过敏反应(休克)", options:["粒细胞缺乏症、过敏反应(休克)","头痛恶心","腹泻腹痛","皮疹瘙痒"] },
+{ q:"服用昊畅期间出现高热、口腔感染等症状，应该怎么做?", a:"立即停药，并即刻评估血液成分和白细胞现象", options:["立即停药，并即刻评估血液成分和白细胞现象","继续服药","剂量加倍","剂量减半"] },
+{ q:"昊畅是否会影响驾驶和使用机器?", a:"不影响", options:["不影响","严重影响","轻度嗜睡影响","头晕影响"] },
+{ q:"孕妇及哺乳期妇女可以使用昊畅吗?", a:"孕妇使用应权衡利弊;哺乳期妇女为慎重起见，应停止用药或中止哺乳", options:["孕妇使用应权衡利弊;哺乳期妇女为慎重起见，应停止用药或中止哺乳","可以随意使用","绝对禁用","仅孕晚期可用"] },
+{ q:"儿童可以使用昊畅吗?", a:"儿童用药的安全性数据尚未建立，不明确", options:["儿童用药的安全性数据尚未建立，不明确","安全有效","慎用","禁用"] },
+{ q:"老年患者使用昊畅需要调整剂量吗?", a:"尚未建立因年龄大而调整剂量的数据，适用于老年患者", options:["尚未建立因年龄大而调整剂量的数据，适用于老年患者","需要减量","需要加量","禁用"] },
+{ q:"昊畅是否与其他药物存在相互作用?", a:"目前尚未发现可与其他药物产生相互作用", options:["目前尚未发现可与其他药物产生相互作用","严重相互作用","轻度相互作用","禁止联用"] },
+{ q:"昊畅可能干扰哪种指标的测定?", a:"可能干扰肌酸酐(极低值时)的测定(PAP 法)", options:["可能干扰肌酸酐(极低值时)的测定(PAP 法)","血糖","肝功能","血脂"] },
+{ q:"昊畅对肌氨酸氧化酶法检测血清肌酐有什么影响?", a:"会产生负干扰，导致肌酐检测结果假性偏低", options:["会产生负干扰，导致肌酐检测结果假性偏低","结果偏高","结果正常","无影响"] },
+{ q:"如何解决昊畅对肌酐检测的干扰问题?(至少列举1 个方法)", a:"1. 采用苦味酸法检测肌酐;2. 若用肌氨酸氧化酶法，需停药至少24 小时后检测，同时结合尿素氮、胱抑素C 综合评估", options:["1. 采用苦味酸法检测肌酐;2. 若用肌氨酸氧化酶法，需停药至少24 小时后检测，同时结合尿素氮、胱抑素C 综合评估","继续原方法","空腹检测","多次检测"] },
+{ q:"昊畅常见的不良反应有哪些?(至少列举3 个)", a:"头痛、腹痛、腹泻、恶心、呕吐、关节痛、肌痛、丙氨酸氨基转移酶升高等", options:["头痛、腹痛、腹泻、恶心、呕吐、关节痛、肌痛、丙氨酸氨基转移酶升高等","休克昏迷","肾衰竭","呼吸衰竭"] },
+{ q:"昊畅的不良反应是否可逆?", a:"一旦停药，这些反应是可逆的", options:["一旦停药，这些反应是可逆的","永久性损伤","不可逆","持续加重"] },
+{ q:"胃功能不良患者服用昊畅有什么建议?", a:"建议同餐或餐后服用，防止胃肠道不适反应", options:["建议同餐或餐后服用，防止胃肠道不适反应","空腹服用","餐前服用","睡前服用"] },
+{ q:"昊畅长期服用会在体内蓄积吗?", a:"不会，24 小时内50%经尿液排泄，50%经肠道排泄，水溶性好，不会蓄积", options:["不会，24 小时内50%经尿液排泄，50%经肠道排泄，水溶性好，不会蓄积","大量蓄积","轻度蓄积","不清楚"] },
+{ q:"糖尿病患者合并高血压，昊畅可联合哪些药物?", a:"二甲双胍/拜糖平/胰岛素", options:["二甲双胍/拜糖平/胰岛素","抗生素","激素","化疗药"] },
+{ q:"糖尿病视网膜病变患者，昊畅可联合哪些药物?", a:"二甲双胍/拜糖平/胰岛素+杞菊地黄丸/石斛夜光丸/滴眼液", options:["二甲双胍/拜糖平/胰岛素+杞菊地黄丸/石斛夜光丸/滴眼液","镇静安眠药","糖皮质激素","降压药"] },
+{ q:"糖尿病肾病患者，昊畅可联合哪些药物?", a:"二甲双胍/拜糖平/胰岛素+呋塞米/渴络欣胶囊/ACEI/ARB", options:["二甲双胍/拜糖平/胰岛素+呋塞米/渴络欣胶囊/ACEI/ARB","抗生素","激素","化疗药"] },
+{ q:"糖尿病周围神经病变患者，昊畅可联合哪些药物?", a:"二甲双胍/拜糖平/胰岛素+硫辛酸/甲钴胺/依帕司他", options:["二甲双胍/拜糖平/胰岛素+硫辛酸/甲钴胺/依帕司他","抗生素","激素","化疗药"] },
+{ q:"下肢静脉功能不全患者，昊畅可联合哪些治疗方案?", a:"黄酮类/七叶皂苷/香豆素类+加压治疗", options:["黄酮类/七叶皂苷/香豆素类+加压治疗","放射治疗","化学治疗","手术治疗"] },
+{ q:"痔疮术后患者，昊畅可联合哪些药物?", a:"马应龙痔疮膏/化痔灵片", options:["马应龙痔疮膏/化痔灵片","抗生素","激素","化疗药"] },
+{ q:"冠心病心绞痛患者，昊畅可联合哪些药物?", a:"阿司匹林/氯吡格雷/硝酸甘油/他汀类药物", options:["阿司匹林/氯吡格雷/硝酸甘油/他汀类药物","镇静药","避孕药","降糖药"] },
+{ q:"昊畅联合阿司匹林会增加出血风险吗?", a:"目前无高级别临床证据显示增加出血风险，且联用抗炎效果大于单用，建议间隔服用", options:["目前无高级别临床证据显示增加出血风险，且联用抗炎效果大于单用，建议间隔服用","大幅增加","轻度增加","绝对禁止联用"] },
+{ q:"昊畅相比胰激肽原酶的核心优势是什么?", a:"昊畅具有微血管保护作用，而胰激肽原酶仅单纯扩张血管", options:["昊畅具有微血管保护作用，而胰激肽原酶仅单纯扩张血管","价格更贵","起效更快","效果更差"] },
+{ q:"昊畅相比马栗种子提取物的核心优势是什么?", a:"昊畅具有微血管保护作用，而马栗种子提取物无此作用", options:["昊畅具有微血管保护作用，而马栗种子提取物无此作用","价格更贵","起效更慢","效果更差"] },
+{ q:"昊畅相比地奥司明的指南推荐优势是什么?", a:"昊畅指南推荐级别更高、应用范围更广", options:["昊畅指南推荐级别更高、应用范围更广","价格更贵","起效更慢","效果更差"] },
+{ q:"昊畅的原研产品是什么?", a:"导升明", options:["导升明","达美康","拜糖平","格华止"] },
+{ q:"昊畅相比原研产品导升明的优势是什么?", a:"通过一致性评价，与原研生物学等效，且价格更具优势", options:["通过一致性评价，与原研生物学等效，且价格更具优势","效果更差","价格更贵","无效"] },
+{ q:"昊畅在减轻小腿部水肿方面相比曲克芦丁的效果如何?", a:"明显优于曲克芦丁", options:["明显优于曲克芦丁","更差","相当","价格更贵"] },
+{ q:"昊畅与复方血栓通胶囊联合治疗年龄相关性黄斑变性的效果如何?", a:"联合治疗组在最佳矫正视力、眼底出血面积等指标上均优于单用昊畅组", options:["联合治疗组在最佳矫正视力、眼底出血面积等指标上均优于单用昊畅组","更差","相当","无效"] },
+{ q:"没有检查出糖网的糖尿病患者可以服用昊畅吗?", a:"可以，根据高血糖“代谢记忆”现象，确诊糖尿病后应尽早服用，预防微血管并发症", options:["可以，根据高血糖“代谢记忆”现象，确诊糖尿病后应尽早服用，预防微血管并发症","不可以","发病后再用","晚期使用"] },
+{ q:"早期糖网患者仅控制血糖就够了吗?", a:"不够，需在控糖基础上加用昊畅，抑制眼底病变发展，减少渗出和出血", options:["不够，需在控糖基础上加用昊畅，抑制眼底病变发展，减少渗出和出血","足够","只需激光","只需手术"] },
+{ q:"昊畅仅对糖尿病引起的肾病有效吗?", a:"不是，对慢性肾小球肾炎、高血压性肾病等其他原因导致的肾病也有治疗效果", options:["不是，对慢性肾小球肾炎、高血压性肾病等其他原因导致的肾病也有治疗效果","是，仅糖肾","仅肾炎","仅高血压肾"] },
+{ q:"昊畅服用后多久能达到血药浓度峰值?", a:"口服500mg 后，6 小时达到血药浓度最大值", options:["口服500mg 后，6 小时达到血药浓度最大值","1小时","3小时","12小时"] },
+{ q:"昊畅服药后6 小时的血药浓度水平是多少?", a:"最大峰浓度值为8µg/ml", options:["最大峰浓度值为8µg/ml","2µg/ml","5µg/ml","15µg/ml"] },
+{ q:"昊畅的不良反应发生率如何?", a:"不良事件发生频率非常低，且多为轻中度，耐受性良好", options:["不良事件发生频率非常低，且多为轻中度，耐受性良好","极高","较高","中等"] },
+{ q:"服用昊畅出现发热反应是什么原因?", a:"和其改善微循环的效果有关", options:["和其改善微循环的效果有关","细菌感染","病毒感染","药物过敏"] },
+{ q:"昊畅在糖尿病足治疗中的作用机制是什么?", a:"改善微循环，促进创面愈合，缩短愈合时间", options:["改善微循环，促进创面愈合，缩短愈合时间","杀菌消毒","止痛镇痛","降低血糖"] },
+{ q:"昊畅在痔疮治疗中的作用机制是什么?", a:"改善微循环，减轻水肿，缓解疼痛和出血症状", options:["改善微循环，减轻水肿，缓解疼痛和出血症状","直接止血","杀菌消炎","降低血糖"] },
+{ q:"昊畅作为“双跨”品种的意义是什么?", a:"既可以在医疗机构由医生处方使用，也能在药店经药师指导后供患者自行购买，方便不同场景下的患者用药", options:["既可以在医疗机构由医生处方使用，也能在药店经药师指导后供患者自行购买，方便不同场景下的患者用药","仅医院可用","仅药店可用","全自费"] }
+];
+
+const startBtn = document.getElementById('start');
+const submitBtn = document.getElementById('submit');
+const nextBtn = document.getElementById('next');
+const resetBtn = document.getElementById('reset');
+const clearWrongBtn = document.getElementById('clearWrong');
+const doWrongBtn = document.getElementById('doWrong');
+const qnum = document.getElementById('qnum');
+const questionEl = document.getElementById('question');
+const optionsEl = document.getElementById('options');
+const answerBox = document.getElementById('answerBox');
+const answerFull = document.getElementById('answerFull');
+const doneEl = document.getElementById('done');
+const rightEl = document.getElementById('right');
+const wrongEl = document.getElementById('wrong');
+const rateEl = document.getElementById('rate');
+const wrongCountEl = document.getElementById('wrongCount');
+const wrongListEl = document.getElementById('wrongList');
+
+let current = -1;
+let select = null;
+let done = 0, right = 0, wrong = 0;
+let used = [];
+let wrongList = [];
+let isWrongMode = false;
+
+startBtn.onclick = () => { isWrongMode = false; nextOne() };
+submitBtn.onclick = check;
+nextBtn.onclick = () => isWrongMode ? wrongNext() : nextOne();
+resetBtn.onclick = resetAll;
+clearWrongBtn.onclick = clearWrong;
+doWrongBtn.onclick = () => {
+  if(wrongList.length === 0){ alert('暂无错题'); return; }
+  isWrongMode = true; wrongNext();
+};
+
+function nextOne(){
+  if(used.length >= 100){ alert('已刷完100题'); resetAll(); return; }
+  do{ current = Math.floor(Math.random()*100); } while(used.includes(current));
+  used.push(current);
+  render();
+}
+
+function wrongNext(){
+  current = wrongList[Math.floor(Math.random() * wrongList.length)];
+  render();
+}
+
+function render(){
+  select = null;
+  submitBtn.disabled = false;
+  nextBtn.disabled = true;
+  answerBox.classList.add('hidden');
+  qnum.innerText = isWrongMode ? `[错题重刷] 第${current+1}题` : `第${current+1}题`;
+  questionEl.innerText = questions[current].q;
+  optionsEl.innerHTML = '';
+  let opts = questions[current].options;
+  opts.forEach((o,i) => {
+    let div = document.createElement('div');
+    div.className = 'option';
+    div.innerText = String.fromCharCode(65+i) + '. ' + o;
+    div.onclick = () => {
+      document.querySelectorAll('.option').forEach(x => x.classList.remove('selected'));
+      div.classList.add('selected');
+      select = i;
+    };
+    optionsEl.appendChild(div);
+  });
+}
+
+function check(){
+  if(select === null) return;
+  submitBtn.disabled = true;
+  nextBtn.disabled = false;
+  done++;
+  let q = questions[current];
+  let okIndex = q.options.indexOf(q.a);
+  let all = document.querySelectorAll('.option');
+  all.forEach((o,i) => {
+    if(i === okIndex) o.classList.add('right');
+    else if(i === select) o.classList.add('wrong');
+    o.onclick = null;
+  });
+  answerFull.innerText = q.a;
+  answerBox.classList.remove('hidden');
+  if(select === okIndex){
+    right++;
+  }else{
+    wrong++;
+    if(!wrongList.includes(current)) wrongList.push(current);
+  }
+  update();
+  showWrong();
+}
+
+function update(){
+  doneEl.innerText = done;
+  rightEl.innerText = right;
+  wrongEl.innerText = wrong;
+  rateEl.innerText = done ? Math.round(right/done*100)+'%' : '0%';
+  wrongCountEl.innerText = wrongList.length;
+}
+
+function showWrong(){
+  if(wrongList.length === 0){ wrongListEl.innerHTML = '暂无错题'; return; }
+  wrongListEl.innerHTML = '';
+  wrongList.forEach(idx => {
+    let item = document.createElement('div');
+    item.className = 'wrong-item';
+    item.innerHTML = `
+      <div class="wrong-q">${idx+1}、${questions[idx].q}</div>
+      <div class="wrong-a">✅ ${questions[idx].a}</div>
+    `;
+    wrongListEl.appendChild(item);
+  });
+}
+
+function clearWrong(){
+  if(!confirm('确定清空错题本？')) return;
+  wrongList = [];
+  showWrong(); update();
+}
+
+function resetAll(){
+  current = -1; select = null; done = 0; right = 0; wrong = 0;
+  used = []; wrongList = []; isWrongMode = false;
+  update(); showWrong();
+  qnum.innerText = '请点击【随机一题】开始';
+  questionEl.innerText = ''; optionsEl.innerHTML = '';
+  answerBox.classList.add('hidden');
+  submitBtn.disabled = true; nextBtn.disabled = true;
+}
+</script>
+</body>
+</html>
